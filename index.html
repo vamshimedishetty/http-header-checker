@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HTTP Header Checker — Vamshi Medishetty</title>
+<style>
+  body { font-family: system-ui, sans-serif; background: #f1f5f9; color: #0f172a; margin: 0; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .sub { color: #475569; margin-top: 0; }
+  .card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-top: 16px; }
+  .row { display: flex; gap: 8px; }
+  input { flex: 1; padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 15px; }
+  button { background: #059669; color: #fff; border: none; padding: 10px 18px; border-radius: 8px; font-size: 15px; cursor: pointer; }
+  button:disabled { background: #94a3b8; }
+  .meta { color: #475569; font-size: 14px; }
+  .item { border-top: 1px solid #e2e8f0; padding: 10px 0; }
+  .item:first-child { border-top: none; }
+  .ok { color: #059669; font-weight: 600; }
+  .bad { color: #dc2626; font-weight: 600; }
+  .val { font-family: ui-monospace, monospace; font-size: 12.5px; word-break: break-all; color: #334155; }
+  .why { color: #64748b; font-size: 13.5px; margin-top: 2px; }
+  .score { font-size: 17px; font-weight: 700; }
+  footer { color: #64748b; font-size: 13px; margin-top: 20px; }
+  a { color: #059669; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>HTTP Header Checker</h1>
+  <p class="sub">Type a website address and this tool fetches its HTTP response headers and checks for 6 common security headers — the same check as my Python tool, running live.</p>
+  <div class="card">
+    <div class="row">
+      <input id="url" type="text" placeholder="https://example.com" value="https://example.com">
+      <button id="go">Check</button>
+    </div>
+    <div id="out" style="margin-top:14px;"></div>
+  </div>
+  <footer>
+    Built by Vamshi Medishetty as a learning project. Checking headers is passive — the same as a browser visit.
+    Python version: <a href="https://github.com/vamshimedishetty/http-header-checker">github.com/vamshimedishetty/http-header-checker</a>
+  </footer>
+</div>
+<script>
+  const out = document.getElementById('out');
+  const btn = document.getElementById('go');
+  async function run() {
+    const url = document.getElementById('url').value.trim();
+    if (!url) return;
+    btn.disabled = true; out.innerHTML = '<p class="meta">Checking…</p>';
+    try {
+      const r = await fetch('/api/check?url=' + encodeURIComponent(url));
+      const d = await r.json();
+      if (d.error) { out.innerHTML = '<p class="bad">' + d.error + '</p>'; return; }
+      let h = '<p class="meta">URL: ' + d.url + '<br>Status: ' + d.status + ' · Server: ' + d.server + '</p>';
+      for (const it of d.results) {
+        h += '<div class="item">' + (it.present
+          ? '<span class="ok">PRESENT</span> ' + it.name + '<div class="val">' + it.value.replace(/</g,'&lt;') + '</div>'
+          : '<span class="bad">MISSING</span> ' + it.name + '<div class="why">Why it matters: ' + it.why + '</div>') + '</div>';
+      }
+      h += '<p class="score">Result: ' + d.present + '/' + d.total + ' security headers present.</p><p class="why">' + d.note + '</p>';
+      out.innerHTML = h;
+    } catch (e) {
+      out.innerHTML = '<p class="bad">Something went wrong while checking. Try again.</p>';
+    } finally { btn.disabled = false; }
+  }
+  btn.addEventListener('click', run);
+  document.getElementById('url').addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+</script>
+</body>
+</html>
